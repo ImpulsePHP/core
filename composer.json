@@ -1,0 +1,45 @@
+{
+  "name": "impulsephp/core",
+  "description": "The core of the ImpulsePHP framework: component engine, rendering system, state management, etc.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Guillaume Bouyer",
+      "email": "impulsephp@icloud.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Impulse\\Core\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Impulse\\Core\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "post-install-cmd": [
+      "@composer dump-autoload --optimize"
+    ],
+    "test": "phpunit"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "require": {
+    "php": ">=8.2",
+    "ext-dom": "*",
+    "ext-libxml": "*",
+    "ext-openssl": "*",
+    "symfony/console": "^7.3",
+    "symfony/process": "^7.3",
+    "illuminate/view": "^12.18",
+    "twig/twig": "^3.21",
+    "scssphp/scssphp": "^2.0"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-latest",
+    "phpunit/phpunit": "^12.2.1"
+  }
+}
