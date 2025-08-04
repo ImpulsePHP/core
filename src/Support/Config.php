@@ -430,4 +430,35 @@ final class Config
         }
         return self::$data;
     }
+
+    /**
+     * @throws \JsonException
+     */
+    public static function has(string $key): bool
+    {
+        if (!self::$loaded) {
+            self::load();
+        }
+
+        if (isset(self::$data[$key])) {
+            return true;
+        }
+
+        if (str_contains($key, '.')) {
+            $keys = explode('.', $key);
+            $value = self::$data;
+
+            foreach ($keys as $k) {
+                if (is_array($value) && isset($value[$k])) {
+                    $value = $value[$k];
+                } else {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return false;
+    }
 }
