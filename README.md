@@ -1,114 +1,150 @@
-ImpulsePHP Core
-===============
+# ImpulsePHP Core
 
-This package provides the core building blocks of the ImpulsePHP framework. It
-contains the component system, rendering engines and utility classes. The
-framework entry point is defined by the `ImpulseKernelInterface` implemented by
-the default `Kernel\Impulse` class.
+`impulsephp/core` est le socle du framework ImpulsePHP. Il fournit le bootstrap de l’application, le conteneur de services, les providers, la couche HTTP, les composants, les pages, les layouts et les outils de support utilisés par les autres packages de l’écosystème.
 
-### HTTP layer
+## Ce que fait le package
 
-A lightweight HTTP layer is available under `Impulse\Core\Http`. It exposes a
-`Request` object able to parse GET/POST parameters from globals. The `PageRouter`
-uses this layer to resolve pages from incoming requests.
+- initialise l’application via `Impulse\Core\App` ;
+- charge la configuration et les providers ;
+- expose le conteneur `ImpulseContainer` ;
+- fournit les briques HTTP, composants, pages et layouts ;
+- met à disposition des utilitaires comme le logger, le profiler et les DevTools.
 
-### Router component
+## Prérequis
 
-The `<router>` component generates standard `<a>` links using page names. It
-handles AJAX navigation and updates the browser history seamlessly.
+- PHP 8.2 ou supérieur ;
+- extensions `dom`, `libxml` et `openssl`.
 
-Components, pages and layouts can access the current HTTP request through the
-`getRequest()` method inherited from `AbstractComponent`. At each navigation,
-`HtmlResponse` stores the page render time and size in `$_SERVER['IMPULSE_PAGE_TIME']`
-and `$_SERVER['IMPULSE_PAGE_WEIGHT']`.
+## Installation
 
-Pages are identified via the `name` property of the `#[PageProperty]` attribute.
-
-### Layout slots
-
-Pages can send data to their layout using the `<slot-layout>` tag. Provide a
-`name` attribute to target a named slot in the layout or omit it to use the
-default slot:
-
-```html
-<slot-layout name="title">My title</slot-layout>
+```bash
+composer require impulsephp/core
 ```
 
-Any remaining markup in the page becomes the content of the layout's default
-slot when no anonymous `<slot-layout>` tag is used.
+## Configuration minimale
 
-### LocalStorage store access
-
-`LocalStorageStoreInstance` lets PHP read and update values from the
-browser's `localStorage` without server persistence. Use the provided
-`assets/impulse/localStorageBridge.js` script on the client so that
-`Request::createFromGlobals()` can populate the store data. When values are
-modified server-side, the generated JavaScript is collected and automatically
-sent back in AJAX or HTML responses so the browser keeps its `localStorage`
-in sync.
-
-### Kernel and service container
-
-The `Impulse\Core\Bootstrap\Kernel` class exposes a minimal dependency
-injection container through the `ImpulseKernelInterface`. Services can be
-registered by `ServiceProvider` implementations like the provided
-`CoreServiceProvider` which sets up the event dispatcher.
+Le package fournit une configuration de base dans `impulse.php` :
 
 ```php
-use Impulse\Core\Bootstrap\{Kernel, CoreServiceProvider};
+<?php
+
+return [
+    'template_engine' => '',
+    'template_path' => 'views',
+    'middlewares' => [],
+    'providers' => [],
+    'locale' => 'fr',
+    'supported' => ['fr', 'en', 'de'],
+    'cache' => [
+        'enabled' => true,
+        'ttl' => 600,
+    ],
+    'devtools' => false,
+];
+```
+
+Ajoutez ensuite vos providers métier dans la clé `providers`.
+
+## Exemple d’usage complet
+
+L’exemple ci-dessous montre un bootstrap minimal avec quelques providers courants.
+
+```php
+use Impulse\Core\App;
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+App::boot();
+
+$container = App::container();
+$translator = App::get(Impulse\Translation\Contract\TranslatorInterface::class);
+```
+
+Exemple de configuration associée :
+
+```php
+return [
+    'providers' => [
+        Impulse\Translation\TranslatorProvider::class,
+        Impulse\Validator\ValidatorProvider::class,
+        Impulse\UI\UIProvider::class,
+    ],
+    'locale' => 'fr',
+    'supported' => ['fr', 'en'],
+];
+```
+
+## Utilisation du conteneur
+
+### Récupérer un service
+
+```php
+use Impulse\Core\App;
+
+App::boot();
+
+$service = App::get(SomeService::class);
+```
+
+### Construire un kernel manuellement
+
+```php
+use Impulse\Core\Bootstrap\CoreServiceProvider;
+use Impulse\Core\Bootstrap\Kernel;
 
 $kernel = new Kernel([
     new CoreServiceProvider(),
 ]);
+
 $kernel->boot();
-$events = $kernel->getContainer()->get(\Impulse\Core\Contracts\EventDispatcherInterface::class);
+$container = $kernel->getContainer();
 ```
 
-Service providers can optionally define a `boot()` method which will be
-executed after all providers have registered their services. This allows
-providers to hook into events or perform initialization once the container
-is fully configured.
+## Pages, composants et routage
 
-### Provider manager
+Les pages sont généralement déclarées avec l’attribut `#[PageProperty]`, qui définit notamment la route, le nom de la page, le titre et le layout utilisé.
 
-The `Impulse` class exposes a simple provider manager. Register providers after
-calling `Impulse::boot()` and then trigger their `boot()` methods:
+Le composant `<router>` permet de générer des liens compatibles avec la navigation AJAX du moteur JavaScript Impulse.
 
-```php
-use Impulse\Core\Kernel\Impulse;
+Exemple de slot vers un layout :
 
-Impulse::boot();
-Impulse::registerProvider(new MyCustomProvider());
-Impulse::bootProviders();
+```html
+<slot-layout name="title">Titre de la page</slot-layout>
 ```
 
-### DevTools event collector
+## HTTP, localStorage et réponse cliente
 
-ImpulsePHP exposes a lightweight event collector that can broadcast framework
-activity to an external DevTools interface when enabled. Set `"devtools" => true`
-in `impulse.php` while in development to activate the socket emitter. All
-events are formatted as JSON and include the originating file and line number.
+Le cœur du framework expose une couche HTTP légère sous `Impulse\Core\Http`. Il inclut aussi un pont avec le `localStorage` du navigateur afin de permettre des synchronisations entre le rendu serveur et le client lorsque le moteur JavaScript est présent.
+
+## Journalisation et DevTools
+
+Le logger intégré peut être utilisé sans configuration complexe :
 
 ```php
 use Impulse\Core\Support\Logger;
 
-Logger::info('Application started', ['route' => '/']);
+Logger::info('Application démarrée', ['route' => '/dashboard']);
 ```
 
-Every log entry is also written to `var/impulse.log` using a readable format:
+En activant `devtools` dans la configuration, certains événements de framework peuvent être diffusés à l’interface de développement.
 
+## Aller plus loin
+
+`impulsephp/core` sert de fondation aux packages :
+
+- `impulsephp/auth`
+- `impulsephp/database`
+- `impulsephp/translation`
+- `impulsephp/validator`
+- `impulsephp/story`
+- `impulsephp/ui`
+
+## Tests
+
+```bash
+composer test
 ```
-[2025-07-22 14:00:00] [INFO] /src/App.php:42 Application started
-    context: {
-        "route": "/"
-    }
-```
 
-The logger accepts an optional context array to enrich each entry and requires
-no configuration.
+## Licence
 
-Profiler timers will also emit `profiler` events whenever `Profiler::stop()` is
-called, capturing the duration and memory usage of each task.
-
-Route resolutions and full HTTP requests are also tracked so a DevTools
-interface can display navigation details in real time.
+MIT
