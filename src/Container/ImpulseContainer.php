@@ -42,7 +42,7 @@ final class ImpulseContainer
             return $this;
         }
 
-        if ($this->has($class)) {
+        if (isset($this->instances[$class])) {
             Logger::debug(
                 sprintf('%s is already registered, returning existing service', $class),
                 [
@@ -52,6 +52,10 @@ final class ImpulseContainer
                 ]
             );
 
+            return $this->instances[$class];
+        }
+
+        if (isset($this->definitions[$class])) {
             return $this->get($class);
         }
 
@@ -65,47 +69,7 @@ final class ImpulseContainer
         $this->resolving[$class] = true;
 
         try {
-            $ref = new \ReflectionClass($class);
-            $ctor = $ref->getConstructor();
-
-            if (!$ctor) {
-                Logger::debug(
-                    sprintf('Instantiating %s without constructor', $class),
-                    [
-                        'class' => self::class,
-                        'method' => __METHOD__,
-                        'target' => $class,
-                    ]
-                );
-
-                unset($this->resolving[$class]);
-                return new $class();
-            }
-
-            $args = [];
-            foreach ($ctor->getParameters() as $param) {
-                $type = $param->getType();
-                if ($type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
-                    $depClass = $type->getName();
-
-                    // Si c'est le conteneur lui-même, on passe $this
-                    if ($depClass === self::class) {
-                        $args[] = $this;
-                    } else {
-                        $args[] = $this->has($depClass)
-                            ? $this->get($depClass)
-                            : $this->make($depClass);
-                    }
-                } elseif ($param->isDefaultValueAvailable()) {
-                    $args[] = $param->getDefaultValue();
-                } else {
-                    throw new \InvalidArgumentException(
-                        sprintf('Cannot resolve parameter "%s" for class "%s"', $param->getName(), $class)
-                    );
-                }
-            }
-
-            $instance = $ref->newInstanceArgs($args);
+            $instance = $this->instantiate($class);
             unset($this->resolving[$class]);
             return $instance;
         } catch (\Exception $e) {
@@ -147,9 +111,55 @@ final class ImpulseContainer
             $class = $namespace . $relative;
 
             if (class_exists($class) && $class !== self::class) {
-                $this->set($class, fn (self $c) => $c->make($class));
+                $this->set($class, fn (self $c) => $c->instantiate($class));
             }
         }
+    }
+
+    /**
+     * @throws \Exception
+     */
+    private function instantiate(string $class): object
+    {
+        $ref = new \ReflectionClass($class);
+        $ctor = $ref->getConstructor();
+
+        if (!$ctor) {
+            Logger::debug(
+                sprintf('Instantiating %s without constructor', $class),
+                [
+                    'class' => self::class,
+                    'method' => __METHOD__,
+                    'target' => $class,
+                ]
+            );
+
+            return new $class();
+        }
+
+        $args = [];
+        foreach ($ctor->getParameters() as $param) {
+            $type = $param->getType();
+            if ($type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
+                $depClass = $type->getName();
+
+                if ($depClass === self::class) {
+                    $args[] = $this;
+                } else {
+                    $args[] = $this->has($depClass)
+                        ? $this->get($depClass)
+                        : $this->make($depClass);
+                }
+            } elseif ($param->isDefaultValueAvailable()) {
+                $args[] = $param->getDefaultValue();
+            } else {
+                throw new \InvalidArgumentException(
+                    sprintf('Cannot resolve parameter "%s" for class "%s"', $param->getName(), $class)
+                );
+            }
+        }
+
+        return $ref->newInstanceArgs($args);
     }
 
     /**

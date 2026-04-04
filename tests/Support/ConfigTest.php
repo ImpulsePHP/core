@@ -29,7 +29,7 @@ class ConfigTest extends TestCase
         Config::reset();
         Config::load($tmp);
         Config::set('template_engine', 'blade');
-        Config::set('component_namespaces', ['Foo\\\\Component\\\\']);
+        Config::set('component_namespaces', ['Foo\\Component\\']);
         Config::save($tmp);
 
         $data = require $tmp;
@@ -38,5 +38,16 @@ class ConfigTest extends TestCase
         $this->assertSame(['Foo\\Component\\'], $data['component_namespaces']);
 
         unlink($tmp);
+    }
+
+    public function testHasAndGetWithNestedKeys(): void
+    {
+        Config::reset();
+        Config::set('app.locale', 'fr');
+
+        $this->assertTrue(Config::has('app.locale'));
+        $this->assertSame('fr', Config::get('app.locale'));
+        $this->assertFalse(Config::has('app.timezone'));
+        $this->assertSame('UTC', Config::get('app.timezone', 'UTC'));
     }
 }

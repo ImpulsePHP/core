@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Impulse\Core\Http;
 
 use Impulse\Core\Contracts\ExceptionHandlerInterface;
+use Impulse\Core\Component\AbstractPage;
 use Impulse\Core\Http\Router\PageRouter;
 use Impulse\Core\Support\Config;
 use Impulse\Core\Support\Logger;
@@ -39,7 +40,7 @@ final class ExceptionHandler implements ExceptionHandlerInterface
             return Response::html($content, $status);
         }
 
-        $componentClass = "\\App\\Component\\Errors\\Error{$status}Component";
+        $componentClass = $this->resolveErrorComponentClass($status);
         if (class_exists($componentClass)) {
             try {
                 $meta = $this->extractPageProperty($componentClass);
@@ -50,6 +51,12 @@ final class ExceptionHandler implements ExceptionHandlerInterface
                 $router = PageRouter::instance();
                 if ($router) {
                     return $router->renderPage($request, $meta, []);
+                }
+
+                if (is_subclass_of($componentClass, AbstractPage::class)) {
+                    /** @var AbstractPage $component */
+                    $component = new $componentClass('error_' . $status, '/');
+                    return Response::html($component->template(), $status);
                 }
             } catch (\Throwable $renderException) {
                 Logger::error(
@@ -90,6 +97,22 @@ final class ExceptionHandler implements ExceptionHandlerInterface
         }
 
         return 500;
+    }
+
+    private function resolveErrorComponentClass(int $status): string
+    {
+        $candidates = [
+            "\\App\\Component\\Errors\\Error{$status}Component",
+            "\\App\\Component\\Error{$status}Component",
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (class_exists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return $candidates[0];
     }
 
     /**

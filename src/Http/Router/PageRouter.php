@@ -101,35 +101,15 @@ final class PageRouter
 
                             $cached->send();
 
-                            RouteCollector::record(
-                                ['route' => $route],
-                                [
-                                    'file' => $meta->file,
-                                    'component' => $meta->class,
-                                    'layout' => $meta->layout,
-                                    'name' => $meta->name,
-                                    'params' => array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY),
-                                ]
-                            );
-
-                            HttpCollector::record(
-                                ['route' => $route, 'method' => $request->getMethod()],
-                                [
-                                    'status' => $cached->getStatusCode(),
-                                    'duration' => (int) ((microtime(true) - $start) * 1000),
-                                    'ip' => $request->server()->get('REMOTE_ADDR', ''),
-                                ]
-                            );
-
-                            HttpRequestCollector::record(
-                                ['method' => $request->getMethod(), 'url' => $request->getUri()],
-                                [
-                                    'status' => $cached->getStatusCode(),
-                                    'duration' => (int) ((microtime(true) - $start) * 1000),
-                                    'request_headers' => $reqHeaders,
-                                    'response_headers' => $cached->getHeaders(),
-                                    'body' => $reqBody,
-                                ]
+                            $this->recordMatchedRoute($route, $meta, $matches);
+                            $this->recordHttpRequest(
+                                $request,
+                                $route,
+                                $cached->getStatusCode(),
+                                $start,
+                                $reqHeaders,
+                                $cached->getHeaders(),
+                                $reqBody
                             );
 
                             Profiler::stop('router:handle');
@@ -153,35 +133,15 @@ final class PageRouter
 
                         $response->send();
 
-                        RouteCollector::record(
-                            ['route' => $route],
-                            [
-                                'file' => $meta->file,
-                                'component' => $meta->class,
-                                'layout' => $meta->layout,
-                                'name' => $meta->name,
-                                'params' => array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY),
-                            ]
-                        );
-
-                        HttpCollector::record(
-                            ['route' => $route, 'method' => $request->getMethod()],
-                            [
-                                'status' => $response->getStatusCode(),
-                                'duration' => (int) ((microtime(true) - $start) * 1000),
-                                'ip' => $request->server()->get('REMOTE_ADDR', ''),
-                            ]
-                        );
-
-                        HttpRequestCollector::record(
-                            ['method' => $request->getMethod(), 'url' => $request->getUri()],
-                            [
-                                'status' => $response->getStatusCode(),
-                                'duration' => (int) ((microtime(true) - $start) * 1000),
-                                'request_headers' => $reqHeaders,
-                                'response_headers' => $response->getHeaders(),
-                                'body' => $reqBody,
-                            ]
+                        $this->recordMatchedRoute($route, $meta, $matches);
+                        $this->recordHttpRequest(
+                            $request,
+                            $route,
+                            $response->getStatusCode(),
+                            $start,
+                            $reqHeaders,
+                            $response->getHeaders(),
+                            $reqBody
                         );
 
                         Profiler::stop('router:handle');
@@ -195,48 +155,81 @@ final class PageRouter
                 ]);
 
                 $this->renderNotFound();
-                HttpCollector::record(
-                    ['route' => $request->getUri(), 'method' => $request->getMethod()],
-                    [
-                        'status' => 404,
-                        'duration' => (int) ((microtime(true) - $start) * 1000),
-                        'ip' => $request->server()->get('REMOTE_ADDR', ''),
-                    ]
-                );
-                HttpRequestCollector::record(
-                    ['method' => $request->getMethod(), 'url' => $request->getUri()],
-                    [
-                        'status' => 404,
-                        'duration' => (int) ((microtime(true) - $start) * 1000),
-                        'request_headers' => $reqHeaders,
-                        'response_headers' => [],
-                        'body' => $reqBody,
-                    ]
+                $this->recordHttpRequest(
+                    $request,
+                    $request->getUri(),
+                    404,
+                    $start,
+                    $reqHeaders,
+                    [],
+                    $reqBody
                 );
                 Profiler::stop('router:handle');
         } catch (\Throwable $e) {
             $handler = new ExceptionHandler();
             $handler->render($e)->send();
-            HttpCollector::record(
-                ['route' => $request->getUri(), 'method' => $request->getMethod()],
-                [
-                    'status' => 500,
-                    'duration' => (int) ((microtime(true) - $start) * 1000),
-                    'ip' => $request->server()->get('REMOTE_ADDR', ''),
-                ]
-            );
-            HttpRequestCollector::record(
-                ['method' => $request->getMethod(), 'url' => $request->getUri()],
-                [
-                    'status' => 500,
-                    'duration' => (int) ((microtime(true) - $start) * 1000),
-                    'request_headers' => $reqHeaders,
-                    'response_headers' => [],
-                    'body' => $reqBody,
-                ]
+            $this->recordHttpRequest(
+                $request,
+                $request->getUri(),
+                500,
+                $start,
+                $reqHeaders,
+                [],
+                $reqBody
             );
             Profiler::stop('router:handle');
         }
+    }
+
+    private function recordMatchedRoute(string $route, object $meta, array $matches): void
+    {
+        RouteCollector::record(
+            ['route' => $route],
+            [
+                'file' => $meta->file,
+                'component' => $meta->class,
+                'layout' => $meta->layout,
+                'name' => $meta->name,
+                'params' => array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY),
+            ]
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $reqHeaders
+     * @param array<string, mixed> $responseHeaders
+     * @param array<string, mixed> $reqBody
+     */
+    private function recordHttpRequest(
+        Request $request,
+        string $route,
+        int $status,
+        float $start,
+        array $reqHeaders,
+        array $responseHeaders,
+        array $reqBody
+    ): void {
+        $duration = (int) ((microtime(true) - $start) * 1000);
+
+        HttpCollector::record(
+            ['route' => $route, 'method' => $request->getMethod()],
+            [
+                'status' => $status,
+                'duration' => $duration,
+                'ip' => $request->server()->get('REMOTE_ADDR', ''),
+            ]
+        );
+
+        HttpRequestCollector::record(
+            ['method' => $request->getMethod(), 'url' => $request->getUri()],
+            [
+                'status' => $status,
+                'duration' => $duration,
+                'request_headers' => $reqHeaders,
+                'response_headers' => $responseHeaders,
+                'body' => $reqBody,
+            ]
+        );
     }
 
     private function normalizeUri(string $uri): string
@@ -368,6 +361,7 @@ final class PageRouter
     }
 
     /**
+     * @internal Méthode de compatibilité interne; préférez addRoutes() sur l'instance.
      * @throws \JsonException
      */
     public static function addRoutesStatic(array $routes): void

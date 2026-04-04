@@ -27,9 +27,11 @@ class LocalStorageStoreInstance implements StoreInterface
 
         if (empty($data) && str_starts_with($_SERVER['CONTENT_TYPE'] ?? '', 'application/json')) {
             $raw = file_get_contents('php://input');
-            $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
-            if (is_array($decoded)) {
-                $data = $decoded;
+            if (is_string($raw) && trim($raw) !== '') {
+                $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded)) {
+                    $data = $decoded;
+                }
             }
         }
 

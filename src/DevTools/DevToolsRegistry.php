@@ -6,6 +6,10 @@ namespace Impulse\Core\DevTools;
 
 final class DevToolsRegistry
 {
+    private const MEMORY_CLEANUP_THRESHOLD_BYTES = 100 * 1024 * 1024;
+    private const MEMORY_CLEANUP_KEEP_EVENTS = 100;
+    private const TRIM_RATIO = 0.8;
+
     /** @var array<int, array<string, mixed>> */
     private static array $events = [];
     private static int $maxEvents = 1000;
@@ -17,21 +21,15 @@ final class DevToolsRegistry
             return;
         }
 
-        if (memory_get_usage() > 100 * 1024 * 1024) { // 100MB
+        if (memory_get_usage() > self::MEMORY_CLEANUP_THRESHOLD_BYTES) {
             self::cleanup();
         }
 
         self::$collecting = true;
 
         try {
-            $event = array_merge([
-                'type' => $type,
-                'timestamp' => (new \DateTimeImmutable())->format(DATE_ATOM),
-            ], $data);
-
-            if (count(self::$events) >= self::$maxEvents) {
-                self::$events = array_slice(self::$events, -intval(self::$maxEvents * 0.8)); // Garder 80%
-            }
+            $event = self::buildEvent($type, $data);
+            self::trimEventsIfNeeded();
 
             self::$events[] = $event;
 
@@ -52,9 +50,10 @@ final class DevToolsRegistry
 
     public static function clear(): void
     {
-        self::$events = [];
+        self::resetEvents();
     }
 
+    /** @internal Point d'ajustement réservé au tooling interne. */
     public static function setMaxEvents(int $maxEvents): void
     {
         self::$maxEvents = $maxEvents;
@@ -62,12 +61,39 @@ final class DevToolsRegistry
 
     private static function cleanup(): void
     {
-        self::$events = array_slice(self::$events, -100);
+        self::$events = array_slice(self::$events, -self::MEMORY_CLEANUP_KEEP_EVENTS);
         if (function_exists('gc_collect_cycles')) {
             gc_collect_cycles();
         }
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private static function buildEvent(string $type, array $data): array
+    {
+        return array_merge([
+            'type' => $type,
+            'timestamp' => (new \DateTimeImmutable())->format(DATE_ATOM),
+        ], $data);
+    }
+
+    private static function trimEventsIfNeeded(): void
+    {
+        if (count(self::$events) < self::$maxEvents) {
+            return;
+        }
+
+        self::$events = array_slice(self::$events, -intval(self::$maxEvents * self::TRIM_RATIO));
+    }
+
+    private static function resetEvents(): void
+    {
+        self::$events = [];
+    }
+
+    /** @internal Statistiques de debug non garanties comme API publique stable. */
     public static function getMemoryStats(): array
     {
         return [

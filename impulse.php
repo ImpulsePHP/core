@@ -12,5 +12,5 @@ return [
         'enabled' => true,
         'ttl' => 600,
     ],
-    'devtools' => false,
+    'devtools' => true,
 ];

@@ -36,7 +36,7 @@ class LocalStorageTest extends TestCase
     {
         $_SERVER['CONTENT_TYPE'] = 'application/json';
         self::$input = json_encode([
-            '_local_storage_payload' => ['store' => '{"foo":"bar"}']
+            '_local_storage' => ['store' => '{"foo":"bar"}']
         ], JSON_THROW_ON_ERROR);
 
         LocalStorage::ingestRequestPayload();
@@ -51,7 +51,7 @@ class LocalStorageTest extends TestCase
     {
         $_SERVER['CONTENT_TYPE'] = 'application/json';
         self::$input = json_encode([
-            '_local_storage_payload' => ['store' => '{"foo":"bar"}']
+            '_local_storage' => ['store' => '{"foo":"bar"}']
         ], JSON_THROW_ON_ERROR);
 
         LocalStorage::ingestRequestPayload();

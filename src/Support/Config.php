@@ -211,26 +211,36 @@ final class Config
 
     private static function getNestedValue(string $key, mixed $default = null): mixed
     {
+        [$found, $value] = self::resolveValue($key);
+        return $found ? $value : $default;
+    }
+
+    /**
+     * @return array{0: bool, 1: mixed}
+     */
+    private static function resolveValue(string $key): array
+    {
         if (isset(self::$data[$key])) {
-            return self::$data[$key];
+            return [true, self::$data[$key]];
         }
 
-        if (str_contains($key, '.')) {
-            $keys = explode('.', $key);
-            $value = self::$data;
+        if (!str_contains($key, '.')) {
+            return [false, null];
+        }
 
-            foreach ($keys as $k) {
-                if (is_array($value) && isset($value[$k])) {
-                    $value = $value[$k];
-                } else {
-                    return $default;
-                }
+        $keys = explode('.', $key);
+        $value = self::$data;
+
+        foreach ($keys as $nestedKey) {
+            if (is_array($value) && isset($value[$nestedKey])) {
+                $value = $value[$nestedKey];
+                continue;
             }
 
-            return $value;
+            return [false, null];
         }
 
-        return $default;
+        return [true, $value];
     }
 
     /**
@@ -268,6 +278,7 @@ final class Config
     }
 
     /**
+     * @internal API utilitaire pour intégrations internes/provider.
      * @throws \JsonException
      */
     public static function appendMultiple(string $key, array $values): void
@@ -415,6 +426,7 @@ final class Config
         return self::$internalNamespaces;
     }
 
+    /** @internal Exposé pour diagnostics internes. */
     public static function getLoadedPaths(): array
     {
         return self::$loadedPaths;
@@ -440,25 +452,7 @@ final class Config
             self::load();
         }
 
-        if (isset(self::$data[$key])) {
-            return true;
-        }
-
-        if (str_contains($key, '.')) {
-            $keys = explode('.', $key);
-            $value = self::$data;
-
-            foreach ($keys as $k) {
-                if (is_array($value) && isset($value[$k])) {
-                    $value = $value[$k];
-                } else {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        return false;
+        [$found] = self::resolveValue($key);
+        return $found;
     }
 }
