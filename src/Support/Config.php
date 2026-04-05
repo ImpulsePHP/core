@@ -308,14 +308,11 @@ final class Config
             if (is_array(self::$data[$key])) {
                 if (is_array($value)) {
                     $merged = array_merge(self::$data[$key], $value);
-
-                    if (str_contains($key, 'namespace')) {
-                        $merged = array_values(array_unique($merged));
-                    }
-
-                    self::$data[$key] = $merged;
+                    self::$data[$key] = self::deduplicateArray($merged);
                 } else {
-                    self::$data[$key][] = $value;
+                    if (!in_array($value, self::$data[$key], true)) {
+                        self::$data[$key][] = $value;
+                    }
                 }
             } else {
                 throw new ConfigException(sprintf('Cannot append to non-array config key "%s"', $key));
@@ -344,14 +341,11 @@ final class Config
             if (is_array($target[$finalKey])) {
                 if (is_array($value)) {
                     $merged = array_merge($target[$finalKey], $value);
-
-                    if (str_contains($key, 'namespace')) {
-                        $merged = array_values(array_unique($merged));
-                    }
-
-                    $target[$finalKey] = $merged;
+                    $target[$finalKey] = self::deduplicateArray($merged);
                 } else {
-                    $target[$finalKey][] = $value;
+                    if (!in_array($value, $target[$finalKey], true)) {
+                        $target[$finalKey][] = $value;
+                    }
                 }
             } else {
                 throw new ConfigException(sprintf('Cannot append to non-array config key "%s"', $key));
@@ -412,6 +406,26 @@ final class Config
         self::$mainPath = null;
         self::$loaded = false;
         self::$loadedPaths = [];
+    }
+
+    /**
+     * Deduplicate an array, supporting both scalar and nested-array elements.
+     * Comparison is done by serialization so arrays-of-arrays are handled correctly.
+     */
+    private static function deduplicateArray(array $array): array
+    {
+        $unique = [];
+        $seen   = [];
+
+        foreach ($array as $item) {
+            $hash = serialize($item);
+            if (!isset($seen[$hash])) {
+                $seen[$hash] = true;
+                $unique[] = $item;
+            }
+        }
+
+        return array_values($unique);
     }
 
     public static function isInternalNamespace(string $namespace): bool
