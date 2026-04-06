@@ -12,7 +12,7 @@ final class DevError
      * @throws \JsonException
      */
     #[NoReturn]
-    public static function respond(string $message, int $httpCode = 400): void
+    public static function respond(string $message, int $httpCode = 400, ?string $errorCode = null): void
     {
         if (Config::get('env', 'prod') !== 'dev') {
             Logger::error($message, [
@@ -26,10 +26,14 @@ final class DevError
 
         http_response_code($httpCode);
         header('Content-Type: application/json');
-        echo json_encode([
+        $payload = [
             'error' => true,
             'message' => $message,
-        ], JSON_THROW_ON_ERROR);
+        ];
+        if ($errorCode !== null) {
+            $payload['code'] = $errorCode;
+        }
+        echo json_encode($payload, JSON_THROW_ON_ERROR);
         Logger::error($message, [
             'class' => self::class,
             'method' => __METHOD__,

@@ -205,7 +205,13 @@ final class AjaxDispatcher
 
             return $actionResult;
         } catch (AjaxDispatcherException|\ReflectionException $e) {
-            DevError::respond('Erreur lors de l\'exécution de l\'action : ' . $e->getMessage());
+            $msg = 'Erreur lors de l\'exécution de l\'action : ' . $e->getMessage();
+            // If the exception indicates the method was not found, return a structured error code
+            if ($e instanceof AjaxDispatcherException && preg_match('/non trouv(e|é)e|not found|introuvable/i', $e->getMessage())) {
+                DevError::respond($msg, 400, 'action_not_found');
+            }
+
+            DevError::respond($msg);
         }
 
         return null;
