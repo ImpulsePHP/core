@@ -10,8 +10,8 @@ use Attribute;
 final class LayoutProperty
 {
     public function __construct(
-        public ?string $prefix = null,
-        public ?string $suffix = null
+        public ?string $titlePrefix = null,
+        public ?string $titleSuffix = null
     ) {}
 
     /**
@@ -20,8 +20,8 @@ final class LayoutProperty
     public function getData(): array
     {
         return [
-            'prefix' => $this->prefix,
-            'suffix' => $this->suffix,
+            'prefix' => $this->titlePrefix,
+            'suffix' => $this->titleSuffix,
         ];
     }
 }
