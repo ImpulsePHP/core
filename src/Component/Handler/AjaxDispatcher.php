@@ -207,8 +207,20 @@ final class AjaxDispatcher
         } catch (AjaxDispatcherException|\ReflectionException $e) {
             $msg = 'Erreur lors de l\'exécution de l\'action : ' . $e->getMessage();
             // If the exception indicates the method was not found, return a structured error code
-            if ($e instanceof AjaxDispatcherException && preg_match('/non trouv(e|é)e|not found|introuvable/i', $e->getMessage())) {
-                DevError::respond($msg, 400, 'action_not_found');
+            if ($e instanceof AjaxDispatcherException && preg_match('/non trouv(e|é)e|not found|introuvable/iu', $e->getMessage())) {
+                // Fournir des informations de debug supplémentaires (id du composant et classe) pour aider au diagnostic.
+                try {
+                    $componentClass = is_object($component) ? get_class($component) : null;
+                    $componentId = is_object($component) && method_exists($component, 'getComponentId') ? $component->getComponentId() : null;
+                    $debugMsg = $msg;
+                    if ($componentClass || $componentId) {
+                        $debugMsg .= ' (component: ' . ($componentClass ?? 'n/a') . ', id: ' . ($componentId ?? 'n/a') . ')';
+                    }
+                } catch (\Throwable) {
+                    $debugMsg = $msg;
+                }
+
+                DevError::respond($debugMsg, 400, 'action_not_found');
             }
 
             DevError::respond($msg);
