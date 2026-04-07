@@ -279,8 +279,8 @@ final class PageRouter
                 if (!empty($attrs)) {
                     /** @var LayoutProperty $layoutAttr */
                     $layoutAttr = $attrs[0]->newInstance();
-                    $prefix = $layoutAttr->prefix;
-                    $suffix = $layoutAttr->suffix;
+                    $prefix = $layoutAttr->titlePrefix;
+                    $suffix = $layoutAttr->titleSuffix;
                 }
             } catch (\ReflectionException) {
                 // ignore
