@@ -13,6 +13,7 @@ use Impulse\Core\Contracts\EventInterface;
 use Impulse\Core\Event\EventDispatcher;
 use Impulse\Core\Exceptions\AjaxDispatcherException;
 use Impulse\Core\Http\Request;
+use Impulse\Core\Http\Response;
 use Impulse\Core\Support\Collection\StateCollection;
 use Impulse\Core\Support\Helper;
 use Impulse\Core\Support\Collector\StyleCollector;
@@ -126,12 +127,10 @@ final class AjaxDispatcher
     }
 
     /**
+     * @param ComponentInterface $component The resolved component; may be replaced by the component that actually handled the action (fallback)
      * @throws \JsonException
      */
-    /**
-     * @param ComponentInterface $component The resolved component; may be replaced by the component that actually handled the action (fallback)
-     */
-    private function executeAction(ComponentInterface &$component, array $data): ?bool
+    private function executeAction(ComponentInterface $component, array $data): ?bool
     {
         if (!isset($data['action'])) {
             return null;
@@ -350,6 +349,30 @@ final class AjaxDispatcher
 
         $component = $this->resolveComponent($data);
         $actionResult = $this->executeAction($component, $data);
+
+        // If the action returned a Response object, convert it to a JSON
+        // instruction for the client (redirect) or send raw response for
+        // non-AJAX flows.
+        if ($actionResult instanceof Response) {
+            $headers = $actionResult->getHeaders();
+            $status = $actionResult->getStatusCode();
+
+            // If a Location header is present, instruct the client to redirect.
+            if (isset($headers['Location'])) {
+                $this->sendJsonResponse(['redirect' => $headers['Location'], 'status' => $status]);
+            }
+
+            // Otherwise, send the raw response (HTML or JSON) and exit.
+            header('Content-Type: text/html; charset=utf-8');
+            http_response_code($status);
+            foreach ($headers as $name => $value) {
+                header("{$name}: {$value}");
+            }
+
+            echo $actionResult->getContent();
+            exit;
+        }
+
         $html = $this->renderResponse($component, $data);
         $emittedUpdates = $this->dispatchQueuedEvents(EventDispatcher::getInstance()->flush());
 
