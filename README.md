@@ -128,6 +128,12 @@ Logger::info('Application démarrée', ['route' => '/dashboard']);
 
 En activant `devtools` dans la configuration, certains événements de framework peuvent être diffusés à l’interface de développement.
 
+## Documentation
+
+La documentation détaillée du package est disponible dans le dossier `docs/`.
+
+- [Guides et références (Table des matières)](./docs/README.md)
+
 ## Aller plus loin
 
 `impulsephp/core` sert de fondation aux packages :
