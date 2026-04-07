@@ -130,7 +130,7 @@ final class AjaxDispatcher
      * @param ComponentInterface $component The resolved component; may be replaced by the component that actually handled the action (fallback)
      * @throws \JsonException
      */
-    private function executeAction(ComponentInterface $component, array $data): ?bool
+    private function executeAction(ComponentInterface $component, array $data): mixed
     {
         if (!isset($data['action'])) {
             return null;
