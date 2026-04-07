@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Impulse\Core\Http\Router;
 
 use Impulse\Core\Attributes\PageProperty;
+use Impulse\Core\Attributes\LayoutProperty;
 use Impulse\Core\Http\Request;
 use Impulse\Core\Http\Response;
 use Impulse\Core\Http\ExceptionHandler;
@@ -266,7 +267,56 @@ final class PageRouter
         $layoutClass = $this->layoutManager->determine($page, $meta);
         $bodyContent = $page->render();
 
+        // Si un layout est appliqué, vérifier s'il fournit un préfixe/suffixe de titre
         if ($layoutClass) {
+            $prefix = null;
+            $suffix = null;
+
+            // 1) Vérifier l'attribut LayoutProperty sur la classe du layout
+            try {
+                $ref = new \ReflectionClass($layoutClass);
+                $attrs = $ref->getAttributes(LayoutProperty::class);
+                if (!empty($attrs)) {
+                    /** @var LayoutProperty $layoutAttr */
+                    $layoutAttr = $attrs[0]->newInstance();
+                    $prefix = $layoutAttr->prefix;
+                    $suffix = $layoutAttr->suffix;
+                }
+            } catch (\ReflectionException) {
+                // ignore
+            }
+
+            // 2) Si pas d'attribut, essayer les méthodes titlePrefix/titleSuffix sur l'instance
+            if ($prefix === null && $suffix === null) {
+                try {
+                    $layoutInstance = $this->layoutManager->createLayoutInstance($layoutClass, $bodyContent, $request->getUri());
+                    if (method_exists($layoutInstance, 'titlePrefix')) {
+                        $prefix = $layoutInstance->titlePrefix();
+                    }
+                    if (method_exists($layoutInstance, 'titleSuffix')) {
+                        $suffix = $layoutInstance->titleSuffix();
+                    }
+                } catch (\Throwable $e) {
+                    // En cas de problème, ne pas bloquer le rendu
+                }
+            }
+
+            $pageTitle = $meta->title ?? '';
+            $parts = [];
+            if ($prefix) {
+                $parts[] = $prefix;
+            }
+            if ($pageTitle !== '') {
+                $parts[] = $pageTitle;
+            }
+            if ($suffix) {
+                $parts[] = $suffix;
+            }
+
+            if (!empty($parts)) {
+                $meta->title = implode(' - ', $parts);
+            }
+
             $bodyContent = $this->layoutManager->apply($layoutClass, $bodyContent, $request->getUri());
         }
 

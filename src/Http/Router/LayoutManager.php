@@ -65,6 +65,43 @@ final class LayoutManager
     }
 
     /**
+     * Crée une instance du layout sans la rendre (utile pour lire des métadonnées comme le préfixe de titre).
+     *
+     * @throws \ReflectionException
+     */
+    public function createLayoutInstance(string $layoutClass, string $bodyContent, string $route): object
+    {
+        if (!class_exists($layoutClass)) {
+            throw new \RuntimeException("La classe de layout '{$layoutClass}' n'existe pas");
+        }
+
+        $classOnly = (new \ReflectionClass($layoutClass))->getShortName();
+        $layoutKebabCase = strtolower(preg_replace('/(?<!^)[A-Z]/', '-$0', $classOnly));
+        $layoutId = 'layout_' . str_replace('\\', '_', $layoutKebabCase);
+        $defaults = $this->extractLayoutSlots($bodyContent);
+
+        $props = ['__slot' => $defaults['__slot'] ?? ''];
+        foreach ($defaults as $key => $value) {
+            if ($key !== '__slot') {
+                $props[$key] = $value;
+            }
+        }
+
+        $layout = new $layoutClass($layoutId, $route, $props);
+
+        foreach ($defaults as $key => $value) {
+            if (str_starts_with($key, '__slot:')) {
+                $slotName = substr($key, 7);
+                if (method_exists($layout, 'setSlot')) {
+                    $layout->setSlot($slotName, $value);
+                }
+            }
+        }
+
+        return $layout;
+    }
+
+    /**
      * @return array<string, string>
      */
     private function extractLayoutSlots(string $html): array
