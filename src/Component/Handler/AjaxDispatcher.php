@@ -16,6 +16,7 @@ use Impulse\Core\Http\Request;
 use Impulse\Core\Http\Response;
 use Impulse\Core\Support\Collection\StateCollection;
 use Impulse\Core\Support\Helper;
+use Impulse\Core\Support\Collector\ScriptCollector;
 use Impulse\Core\Support\Collector\StyleCollector;
 use Impulse\Core\Support\DevError;
 use JetBrains\PhpStorm\NoReturn;
@@ -80,6 +81,10 @@ final class AjaxDispatcher
 
         if ($styles = StyleCollector::renderStyle()) {
             $response['styles'] = $styles;
+        }
+
+        if ($scripts = ScriptCollector::renderScript()) {
+            $response['scripts'] = $scripts;
         }
 
         header('Content-Type: application/json');
@@ -431,6 +436,10 @@ final class AjaxDispatcher
 
         if ($styles = StyleCollector::renderStyle()) {
             $response['styles'] = $styles;
+        }
+
+        if ($scripts = ScriptCollector::renderScript()) {
+            $response['scripts'] = $scripts;
         }
 
         if ($localStorage = Store::getAllDataLocalStorage()) {

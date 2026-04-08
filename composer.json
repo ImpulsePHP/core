@@ -32,6 +32,7 @@
     "ext-dom": "*",
     "ext-libxml": "*",
     "ext-openssl": "*",
+    "ext-pdo": "*",
     "symfony/console": "^7.3",
     "symfony/process": "^7.3",
     "illuminate/view": "^12.18",
