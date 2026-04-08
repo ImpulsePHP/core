@@ -139,7 +139,7 @@ La documentation détaillée du package est disponible dans le dossier `docs/`.
 `impulsephp/core` sert de fondation aux packages :
 
 - `impulsephp/auth`
-- `impulsephp/database`
+- `impulsephp/db`
 - `impulsephp/translation`
 - `impulsephp/validator`
 - `impulsephp/story`
