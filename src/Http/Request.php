@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Impulse\Core\Http;
 
+use Impulse\Core\Support\Flash;
 use Impulse\Core\Support\Collection\ParameterCollection;
 
 final class Request
@@ -62,6 +63,36 @@ final class Request
     public function server(): ParameterCollection
     {
         return $this->server;
+    }
+
+    public function flash(string $key, mixed $value): self
+    {
+        Flash::put($key, $value);
+
+        return $this;
+    }
+
+    public function hasFlash(string $key): bool
+    {
+        return Flash::has($key);
+    }
+
+    public function getFlash(string $key, mixed $default = null): mixed
+    {
+        return Flash::get($key, $default);
+    }
+
+    public function peekFlash(string $key, mixed $default = null): mixed
+    {
+        return Flash::get($key, $default, false);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function allFlashes(bool $clear = true): array
+    {
+        return Flash::all($clear);
     }
 
     public function isAjax(): bool

@@ -1,31 +1,134 @@
-# Attributs (Attributes)
+# Attributs PHP
 
-Le package `impulsephp/core` fournit plusieurs attributs PHP pour déclarer des métadonnées sur les classes `Page` et `Layout`.
+Le package s'appuie sur quelques attributs PHP pour déclarer du comportement sans configuration impérative.
 
 ## `#[PageProperty(...)]`
-Voir la documentation existante dans le README (déclaration de route, titre, layout, etc.).
 
-## `#[LayoutProperty(prefix: ?string, suffix: ?string)]`
+Namespace :
 
-L'attribut `LayoutProperty` permet de déclarer directement des métadonnées de layout au-dessus de la classe. Il est principalement utilisé pour fournir un préfixe ou un suffixe appliqué au titre des pages rendues avec ce layout.
+```php
+use Impulse\Core\Attributes\PageProperty;
+```
 
-Exemple :
+Cet attribut s'applique à une classe qui étend `Impulse\Core\Component\AbstractPage`.
+
+```php
+#[PageProperty(
+    route: '/login',
+    name: 'login',
+    title: 'Connexion',
+    layout: App\Layout\DefaultLayout::class,
+    auth: false,
+    roles: [],
+    middlewares: [App\Http\Middleware\GuestOnlyMiddleware::class],
+    cache: false,
+    priority: 10
+)]
+final class LoginPage extends AbstractPage
+{
+    public function template(): string
+    {
+        return $this->view('pages.login');
+    }
+}
+```
+
+### Paramètres
+
+- `route` : route HTTP, avec support des paramètres au format `[:name]`.
+- `name` : nom logique de la page, utilisé notamment par `PageRouter::generate()` et `Response::redirectToPage()`.
+- `title` : titre HTML injecté dans `<title>`.
+- `layout` : classe de layout à utiliser.
+- `auth` : métadonnée disponible pour vos extensions ou middlewares.
+- `roles` : métadonnée disponible pour vos extensions ou middlewares.
+- `middlewares` : middlewares ajoutés uniquement à cette page.
+- `cache` : `false` désactive le cache HTML pour cette page.
+- `priority` : priorité de tri des routes.
+
+### Paramètres internes
+
+- `class` et `file` sont remplis par le routeur lors du chargement.
+
+## `#[LayoutProperty(...)]`
+
+Namespace :
 
 ```php
 use Impulse\Core\Attributes\LayoutProperty;
+```
 
-#[LayoutProperty(prefix: 'ImpulsePHP', suffix: 'MonSite')]
+Cet attribut s'applique à une classe qui étend `Impulse\Core\Component\AbstractLayout`.
+
+```php
+#[LayoutProperty(
+    titlePrefix: 'Mon application',
+    titleSuffix: 'ImpulsePHP'
+)]
 final class DefaultLayout extends AbstractLayout
+{
+    public function template(): string
+    {
+        return <<<HTML
+            <main>
+                {$this->slot()}
+            </main>
+        HTML;
+    }
+}
+```
+
+### Effet
+
+- Le routeur lit d'abord `LayoutProperty`.
+- Si l'attribut n'est pas présent, il essaye `titlePrefix()` et `titleSuffix()` sur l'instance du layout.
+- Le titre final est composé à partir de `prefix`, `page title`, `suffix`.
+
+## `#[Action]`
+
+Namespace :
+
+```php
+use Impulse\Core\Attributes\Action;
+```
+
+Marque une méthode publique de composant comme appelable par le dispatcher AJAX.
+
+```php
+#[Action]
+public function save(): void
 {
     // ...
 }
 ```
 
-### Priorité d'application
-- L'attribut `LayoutProperty` est consulté avant d'instancier le layout pour lire `titlePrefix` / `titleSuffix`.
-- Si l'attribut n'existe pas, le router instancie le layout et appelle `titlePrefix()` / `titleSuffix()`.
+### Règles
 
-### Remarques
-- L'attribut est facultatif. Il offre une manière déclarative et simple d'ajouter un préfixe/suffixe global pour les pages utilisant le layout.
-- L'attribut est compatible avec la compatibilité descendante : si vos layouts utilisent déjà `titlePrefix()` cela continuera de fonctionner.
+- la méthode doit être publique ;
+- les méthodes magiques ne sont pas appelées ;
+- le dispatcher peut injecter l'argument `value` envoyé par le client si nécessaire.
 
+## `#[Renderer(...)]`
+
+Namespace :
+
+```php
+use Impulse\Core\Attributes\Renderer;
+```
+
+Cet attribut déclare un moteur de rendu utilisable par la factory.
+
+```php
+#[Renderer(
+    name: 'twig',
+    bundle: 'twig/twig'
+)]
+final class TwigRenderer implements TemplateRendererInterface
+{
+    // ...
+}
+```
+
+### Paramètres
+
+- `name` : nom logique du renderer, utilisé par `template_engine`.
+- `bundle` : package Composer attendu ou conseillé.

@@ -24,6 +24,8 @@ use Impulse\Core\Support\Collection\WatcherCollection;
 use Impulse\Core\Support\Collector\ScriptCollector;
 use Impulse\Core\Support\Collector\StyleCollector;
 use Impulse\Core\Support\Profiler;
+use JsonException;
+use ReflectionException;
 use ScssPhp\ScssPhp\Exception\SassException;
 
 abstract class AbstractComponent implements ComponentInterface
@@ -52,8 +54,8 @@ abstract class AbstractComponent implements ComponentInterface
     abstract public function template(): string;
 
     /**
-     * @throws \ReflectionException
-     * @throws \JsonException
+     * @throws ReflectionException
+     * @throws JsonException
      */
     public function __construct(string $id, ?string $route = null, array $defaults = [])
     {
@@ -180,7 +182,7 @@ abstract class AbstractComponent implements ComponentInterface
     }
 
     /**
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function getMethods(): MethodCollection
     {
@@ -332,6 +334,9 @@ abstract class AbstractComponent implements ComponentInterface
         return null;
     }
 
+    /**
+     * @throws JsonException
+     */
     public function emit(string $event, mixed $payload = null): void
     {
         EventDispatcher::getInstance()->queue(new Event($event, $payload));
@@ -343,7 +348,7 @@ abstract class AbstractComponent implements ComponentInterface
     }
 
     /**
-     * @throws \JsonException
+     * @throws JsonException|ReflectionException
      */
     public function render(?string $update = null): string
     {
@@ -380,7 +385,7 @@ abstract class AbstractComponent implements ComponentInterface
     }
 
     /**
-     * @throws \JsonException
+     * @throws JsonException
      */
     private function prepareDataStates(): ?string
     {
@@ -396,8 +401,8 @@ abstract class AbstractComponent implements ComponentInterface
     }
 
     /**
-     * @throws \ReflectionException
-     * @throws \JsonException
+     * @throws ReflectionException
+     * @throws JsonException
      */
     private function transformTemplate(string $rawTemplate): string
     {
@@ -409,7 +414,7 @@ abstract class AbstractComponent implements ComponentInterface
     }
 
     /**
-     * @throws \JsonException
+     * @throws JsonException
      */
     private function collectAssets(): void
     {
@@ -429,7 +434,7 @@ abstract class AbstractComponent implements ComponentInterface
     }
 
     /**
-     * @throws \JsonException
+     * @throws JsonException
      */
     private function extractUpdateFragments(string $template, string $group, ?string $dataStates): ?string
     {

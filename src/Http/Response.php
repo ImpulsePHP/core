@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Impulse\Core\Http;
 
+use Impulse\Core\Exceptions\ImpulseException;
+use Impulse\Core\Http\Router\PageRouter;
+use Impulse\Core\Support\Flash;
+
 final class Response
 {
     private int $statusCode;
@@ -78,6 +82,25 @@ final class Response
     public static function redirect(string $location, int $statusCode = 302): self
     {
         return new self('', $statusCode, ['Location' => $location]);
+    }
+
+    public static function redirectToPage(string $pageName, array $routeParameters = [], int $statusCode = 302): self
+    {
+        $router = PageRouter::instance() ?? new PageRouter();
+        $location = $router->generate($pageName, $routeParameters);
+
+        if ($location === '#') {
+            throw new ImpulseException("La route \"{$pageName}\" est inexistante");
+        }
+
+        return self::redirect($location, $statusCode);
+    }
+
+    public function withFlash(string $key, mixed $value): self
+    {
+        Flash::put($key, $value);
+
+        return $this;
     }
 
     public static function html(string $content, int $statusCode = 200): self

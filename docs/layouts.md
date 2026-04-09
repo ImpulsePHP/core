@@ -1,82 +1,105 @@
 # Layouts
 
-Les layouts permettent d'envelopper le rendu d'une page et d'y définir des portions réutilisables (slots), des styles et des métadonnées partagées.
+Les layouts enveloppent les pages et centralisent la structure HTML commune, les slots, les assets partagés et les métadonnées de titre.
 
-Impulse fournit une classe de base `Impulse\Core\Component\AbstractLayout` que vous pouvez étendre pour créer vos propres layouts.
+## Classe de base
 
-## Méthodes disponibles
-
-- `titlePrefix(): ?string` — (optionnel) retourne une chaîne qui sera préfixée devant le titre de la page.
-- `titleSuffix(): ?string` — (optionnel) retourne une chaîne qui sera suffixée après le titre de la page.
-- `isScopedStyle(): bool` — (hérité) permet de déterminer si les styles du layout doivent être scoper.
-
-Ces méthodes sont définies dans `AbstractLayout` avec des valeurs par défaut (null / false). Vous pouvez les surcharger dans votre layout pour fournir un comportement personnalisé.
-
-## Utilisation par méthode (exemple)
+Un layout étend `Impulse\Core\Component\AbstractLayout`.
 
 ```php
-namespace App\Layout\Default;
+namespace App\Layout;
 
+use Impulse\Core\Attributes\LayoutProperty;
 use Impulse\Core\Component\AbstractLayout;
 use Impulse\Core\Support\Collector\StyleCollector;
 
+#[LayoutProperty(titlePrefix: 'Mon site')]
 final class DefaultLayout extends AbstractLayout
 {
     public function setup(): void
     {
-        StyleCollector::addSheet('/css/main.css');
-    }
-
-    public function titlePrefix(): ?string
-    {
-        return 'ImpulsePHP';
+        StyleCollector::addSheet('/css/app.css');
     }
 
     public function template(): string
     {
-        return $this->view('layouts.default', [
-            'slot' => $this->slot(),
-        ]);
+        return <<<HTML
+            <header>Header</header>
+            <main>{$this->slot()}</main>
+            <footer>Footer</footer>
+        HTML;
     }
 }
 ```
 
-Toutes les pages utilisant ce layout verront leur titre préfixé automatiquement par `DefaultLayout::titlePrefix()`.
+## Choisir un layout
 
-## Utilisation via attribut (préférence déclarative)
+Ordre de priorité :
 
-Vous pouvez également déclarer un préfixe et/ou suffixe directement sur la classe de layout en utilisant l'attribut `#[LayoutProperty(prefix: ..., suffix: ...)]`.
+1. `layout()` sur la page ;
+2. `layout:` dans `#[PageProperty]` ;
+3. `template_layout` dans `impulse.php`.
 
-Avantages :
-- Syntaxe déclarative plus compacte.
-- Lisibilité : les métadonnées sont visibles au-dessus de la classe.
+## Slots de layout
 
-Exemple :
+Les pages peuvent alimenter des slots dédiés avec `<slot-layout>`.
 
-```php
-use Impulse\Core\Attributes\LayoutProperty;
+### Dans la page
 
-#[LayoutProperty(prefix: 'ImpulsePHP')]
-final class DefaultLayout extends AbstractLayout
-{
-    // ...
-}
+```html
+<slot-layout name="hero">
+    <section class="hero">Bienvenue</section>
+</slot-layout>
+
+<article>
+    Contenu principal
+</article>
 ```
 
-L'implémentation du router applique la logique suivante (priorité) :
+### Dans le layout
 
-1. Si la classe de layout possède un attribut `LayoutProperty`, ses valeurs `prefix`/`suffix` sont utilisées.
-2. Sinon, si l'instance du layout implémente `titlePrefix()` / `titleSuffix()`, ces méthodes sont appelées.
-3. Le titre final de la page devient : `prefix - pageTitle - suffix`, en ignorant les parties manquantes.
+```php
+return <<<HTML
+    <div class="hero-zone">{$this->slot('hero')}</div>
+    <main>{$this->slot()}</main>
+HTML;
+```
 
-## Slots et rendu
+### Comportement
 
-Les layouts supportent les slots via la balise `<slot-layout name="...">` dans les templates de page. Le `LayoutManager` extrait ces slots et les fournit en tant que props au layout lors de son instanciation.
+- `slot()` retourne le contenu principal ;
+- `slot('hero')` retourne le slot nommé `hero` ;
+- les balises `<slot-layout>` sont retirées du corps principal avant injection.
+
+## Titre HTML
+
+Deux mécanismes existent :
+
+- attribut `#[LayoutProperty(titlePrefix: ..., titleSuffix: ...)]`
+- méthodes `titlePrefix()` et `titleSuffix()`
+
+Le routeur compose le titre final à partir du titre de page et de ces métadonnées.
+
+## Styles et scripts
+
+Un layout est aussi un composant. Il peut donc :
+
+- surcharger `style()` ;
+- surcharger `script()` ;
+- appeler `StyleCollector::addSheet()` ;
+- appeler `ScriptCollector::addFile()`.
+
+Contrairement aux composants classiques, le style d'un layout n'est pas scoppé automatiquement.
+
+## Particularités des layouts
+
+- le wrapper rendu par un layout reçoit `id="app"` ;
+- le layout est rendu après la page ;
+- il a accès à la route courante comme n'importe quel composant.
 
 ## Bonnes pratiques
 
-- Préférez la déclaration via attribut pour un comportement simple et lisible.
-- Si votre layout a besoin de logique (ex. récupération de la valeur dans la config), surchargez `titlePrefix()` pour retourner dynamiquement la valeur.
-- Gardez le séparateur ` - ` comme convention par défaut ; changez la composition si vous avez des besoins particuliers.
-
-
+- utilisez un layout pour la structure commune de page, pas pour la logique métier ;
+- préférez `LayoutProperty` pour les métadonnées simples ;
+- réservez `titlePrefix()` et `titleSuffix()` aux cas dynamiques ;
+- centralisez dans le layout les assets globaux du front.

@@ -1,19 +1,15 @@
 # ImpulsePHP Core
 
-`impulsephp/core` est le socle du framework ImpulsePHP. Il fournit le bootstrap de l’application, le conteneur de services, les providers, la couche HTTP, les composants, les pages, les layouts et les outils de support utilisés par les autres packages de l’écosystème.
+`impulsephp/core` est le socle du framework ImpulsePHP. Il fournit :
 
-## Ce que fait le package
-
-- initialise l’application via `Impulse\Core\App` ;
-- charge la configuration et les providers ;
-- expose le conteneur `ImpulseContainer` ;
-- fournit les briques HTTP, composants, pages et layouts ;
-- met à disposition des utilitaires comme le logger, le profiler et les DevTools.
-
-## Prérequis
-
-- PHP 8.2 ou supérieur ;
-- extensions `dom`, `libxml` et `openssl`.
+- le bootstrap de l'application ;
+- le conteneur de services ;
+- les providers ;
+- la couche HTTP ;
+- les pages, composants et layouts ;
+- les renderers ;
+- le cache HTML ;
+- les collecteurs d'assets, logs et profils.
 
 ## Installation
 
@@ -23,18 +19,16 @@ composer require impulsephp/core
 
 ## Configuration minimale
 
-Le package fournit une configuration de base dans `impulse.php` :
-
 ```php
 <?php
 
 return [
-    'template_engine' => '',
+    'template_engine' => null,
     'template_path' => 'views',
-    'middlewares' => [],
     'providers' => [],
+    'middlewares' => [],
     'locale' => 'fr',
-    'supported' => ['fr', 'en', 'de'],
+    'supported' => ['fr', 'en'],
     'cache' => [
         'enabled' => true,
         'ttl' => 600,
@@ -43,11 +37,7 @@ return [
 ];
 ```
 
-Ajoutez ensuite vos providers métier dans la clé `providers`.
-
-## Exemple d’usage complet
-
-L’exemple ci-dessous montre un bootstrap minimal avec quelques providers courants.
+## Démarrage rapide
 
 ```php
 use Impulse\Core\App;
@@ -55,95 +45,110 @@ use Impulse\Core\App;
 require_once __DIR__ . '/vendor/autoload.php';
 
 App::boot();
-
-$container = App::container();
-$translator = App::get(Impulse\Translation\Contract\TranslatorInterface::class);
 ```
 
-Exemple de configuration associée :
+## Exemple de page
 
 ```php
-return [
-    'providers' => [
-        Impulse\Translation\TranslatorProvider::class,
-        Impulse\Validator\ValidatorProvider::class,
-        Impulse\UI\UIProvider::class,
-    ],
-    'locale' => 'fr',
-    'supported' => ['fr', 'en'],
-];
+namespace App\Page;
+
+use App\Layout\DefaultLayout;
+use Impulse\Core\Attributes\PageProperty;
+use Impulse\Core\Component\AbstractPage;
+
+#[PageProperty(
+    route: '/',
+    name: 'home',
+    title: 'Accueil',
+    layout: DefaultLayout::class
+)]
+final class HomePage extends AbstractPage
+{
+    public function template(): string
+    {
+        return <<<HTML
+            <h1>Accueil</h1>
+        HTML;
+    }
+}
 ```
 
-## Utilisation du conteneur
-
-### Récupérer un service
+## Exemple de composant
 
 ```php
-use Impulse\Core\App;
+namespace App\Component;
 
-App::boot();
+use Impulse\Core\Attributes\Action;
+use Impulse\Core\Component\AbstractComponent;
 
-$service = App::get(SomeService::class);
+final class CounterComponent extends AbstractComponent
+{
+    public function setup(): void
+    {
+        $this->state('count', 0);
+    }
+
+    #[Action]
+    public function increment(): void
+    {
+        $this->count++;
+    }
+
+    public function template(): string
+    {
+        return <<<HTML
+            <button>{$this->count}</button>
+        HTML;
+    }
+}
 ```
 
-### Construire un kernel manuellement
+## HTTP
+
+### Redirection simple
 
 ```php
-use Impulse\Core\Bootstrap\CoreServiceProvider;
-use Impulse\Core\Bootstrap\Kernel;
+use Impulse\Core\Http\Response;
 
-$kernel = new Kernel([
-    new CoreServiceProvider(),
-]);
-
-$kernel->boot();
-$container = $kernel->getContainer();
+return Response::redirect('/login');
 ```
 
-## Pages, composants et routage
-
-Les pages sont généralement déclarées avec l’attribut `#[PageProperty]`, qui définit notamment la route, le nom de la page, le titre et le layout utilisé.
-
-Le composant `<router>` permet de générer des liens compatibles avec la navigation AJAX du moteur JavaScript Impulse.
-
-Exemple de slot vers un layout :
-
-```html
-<slot-layout name="title">Titre de la page</slot-layout>
-```
-
-## HTTP, localStorage et réponse cliente
-
-Le cœur du framework expose une couche HTTP légère sous `Impulse\Core\Http`. Il inclut aussi un pont avec le `localStorage` du navigateur afin de permettre des synchronisations entre le rendu serveur et le client lorsque le moteur JavaScript est présent.
-
-## Journalisation et DevTools
-
-Le logger intégré peut être utilisé sans configuration complexe :
+### Redirection par nom de page
 
 ```php
-use Impulse\Core\Support\Logger;
-
-Logger::info('Application démarrée', ['route' => '/dashboard']);
+return Response::redirectToPage('login');
 ```
 
-En activant `devtools` dans la configuration, certains événements de framework peuvent être diffusés à l’interface de développement.
+### Message flash
 
-## Documentation
+```php
+return Response::redirectToPage('login')
+    ->withFlash('registered', '1');
+```
 
-La documentation détaillée du package est disponible dans le dossier `docs/`.
+Puis sur la requête suivante :
 
-- [Guides et références (Table des matières)](./docs/README.md)
+```php
+$registered = $request->getFlash('registered');
+```
 
-## Aller plus loin
+## Documentation détaillée
 
-`impulsephp/core` sert de fondation aux packages :
+La documentation détaillée est disponible dans [`docs/`](./docs/README.md).
 
-- `impulsephp/auth`
-- `impulsephp/db`
-- `impulsephp/translation`
-- `impulsephp/validator`
-- `impulsephp/story`
-- `impulsephp/ui`
+Principaux guides :
+
+- [Architecture et cycle de vie](./docs/architecture.md)
+- [Configuration](./docs/impulse-configuration.md)
+- [Pages, composants et routage](./docs/pages_components.md)
+- [Layouts](./docs/layouts.md)
+- [HTTP, Request, Response et middleware](./docs/http.md)
+- [Conteneur et providers](./docs/container.md)
+- [Providers](./docs/providers.md)
+- [Renderers](./docs/renderers.md)
+- [Événements, store et DevTools](./docs/events-devtools.md)
+- [Cache et performances](./docs/cache.md)
+- [CLI `bin/impulse`](./docs/bin-impulse.md)
 
 ## Tests
 

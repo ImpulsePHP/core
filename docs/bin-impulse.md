@@ -1,112 +1,90 @@
-# Utilisation de la commande CLI `./bin/impulse`
+# CLI `bin/impulse`
 
-Ce document explique comment utiliser la commande CLI fournie dans un projet Impulse (fichier `bin/impulse`).
+Le package expose des commandes Symfony Console destinées au scaffolding et à la configuration rapide d'un projet.
 
-Exécutable :
+## Exécution
 
-- Le fichier `bin/impulse` (ex. : fourni dans un projet) est un exécutable Symfony Console.
-- Pour l'exécuter depuis la racine du projet :
-
-```bash
-php ./bin/impulse <commande>
-# ou si le fichier est exécutable :
-./bin/impulse <commande>
-```
-
-Options générales (Symfony Console) :
-
-- `list` : liste les commandes disponibles
-- `--help` : obtenir l'aide d'une commande (`./bin/impulse <commande> --help`)
-
-Commandes fournies par défaut (implémentées dans Core) :
-
-- `renderer:configure` (alias : `r:config`, `renderer:setup`, `renderer:config`)
-  - Description : initialise le projet avec un moteur de template.
-  - Actions :
-    - Découvre les renderers disponibles (dans `src/Renderer` et via l'autoload composer).
-    - Demande quel moteur utiliser et le chemin des templates (par défaut `views`).
-    - Écrit (ou met à jour) le fichier `impulse.php` avec `template_engine` et `template_path`.
-    - Propose d'ajouter le package Composer du renderer choisi si nécessaire.
-  - Exemple d'utilisation :
-
-```bash
-php ./bin/impulse renderer:configure
-```
-
-- `make:renderer` (alias : `r:new`, `r:make`)
-  - Description : génère une classe de renderer personnalisée dans `src/Renderer`.
-  - Interaction : pose le nom du renderer et crée un squelette de classe implémentant
-    `TemplateRendererInterface` avec l'attribut `#[Renderer(...)]`.
-  - Exemple :
-
-```bash
-php ./bin/impulse make:renderer
-# puis saisissez : MyAwesomeRenderer
-```
-
-- `make:component` (alias : `m:component`, `c:make`)
-  - Description : crée un composant (classe) dans `src/Component`.
-  - Interaction : demande le nom du composant (ex: `NavbarComponent`) et crée le fichier.
-  - Exemple :
-
-```bash
-php ./bin/impulse make:component
-# puis saisissez : NavbarComponent
-```
-
-- `make:page` (alias : `m:page`, `p:make`)
-  - Description : crée une page dans `src/Page` avec un attribut `PageProperty`.
-  - Interaction : demande le nom de la page et l'URL (route), puis crée le squelette de classe.
-  - Exemple :
-
-```bash
-php ./bin/impulse make:page
-# puis saisissez : ContactPage
-# puis saisissez l'URL : /contact
-```
-
-Conseils d'utilisation :
-
-- Pour voir la liste complète et l'aide détaillée d'une commande :
+Depuis la racine du projet :
 
 ```bash
 php ./bin/impulse list
-php ./bin/impulse make:component --help
+php ./bin/impulse <commande> --help
 ```
 
-- Exécutez toujours les commandes depuis la racine du projet (le script attend `vendor/autoload.php` à la racine).
+## Commandes principales
 
-- Si la commande `renderer:configure` propose d'installer un package Composer, elle lancera
-  `composer require <package>` en utilisant le binaire `composer` disponible sur le système.
+### `renderer:configure`
 
-Personnaliser les commandes CLI pour votre projet :
+Alias :
 
-- Le fichier `bin/impulse` est le point d'entrée : vous pouvez y ajouter des commandes
-  supplémentaires en important et en enregistrant vos classes de commande :
+- `r:config`
+- `renderer:setup`
+- `renderer:config`
+
+Cette commande :
+
+- détecte les renderers disponibles ;
+- demande le moteur à utiliser ;
+- demande le chemin des vues ;
+- met à jour `impulse.php`.
+
+## `make:component`
+
+Alias :
+
+- `m:component`
+- `c:make`
+
+Crée un squelette de composant dans `src/Component`.
+
+Exemple :
+
+```bash
+php ./bin/impulse make:component
+```
+
+## `make:page`
+
+Alias :
+
+- `m:page`
+- `p:make`
+
+Crée un squelette de page dans `src/Page`.
+
+Exemple :
+
+```bash
+php ./bin/impulse make:page
+```
+
+## `make:renderer`
+
+Alias :
+
+- `r:new`
+- `r:make`
+
+Crée un squelette de renderer dans `src/Renderer`.
+
+Exemple :
+
+```bash
+php ./bin/impulse make:renderer
+```
+
+## Conseils
+
+- exécutez toujours ces commandes à la racine du projet ;
+- relisez les fichiers générés, ce sont des points de départ ;
+- utilisez `renderer:configure` avant de vous reposer sur `view()`.
+
+## Étendre la CLI
+
+Le binaire étant basé sur Symfony Console, vous pouvez y enregistrer vos propres commandes :
 
 ```php
 $app = new \Symfony\Component\Console\Application('Impulse CLI', '1.0.0');
-$app->add(new \App\Console\MyCustomCommand());
+$app->add(new \App\Console\SyncUsersCommand());
 $app->run();
 ```
-
-- Alternativement, créez vos commandes dans un provider qui les enregistre automatiquement
-  à l'initialisation si vous avez un mécanisme d'enregistrement centralisé.
-
-Dépannage :
-
-- Erreur « composer.json introuvable » lors de `renderer:configure` : exécutez la commande
-  depuis la racine du projet où se trouve `composer.json`.
-- Erreurs de permission pour `./bin/impulse` : rendez le fichier exécutable :
-
-```bash
-chmod +x ./bin/impulse
-```
-
-Résumé rapide :
-
-- `./bin/impulse` est une interface simple pour les helpers de développement (scaffolding)
-  et pour initialiser certains aspects du projet (renderer).
-- Utilisez `renderer:configure` pour initialiser la couche de templates et `make:*` pour
-  générer rapidement la structure de classes (components/pages/renderers).
-
