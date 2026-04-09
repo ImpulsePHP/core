@@ -132,6 +132,23 @@ Puis sur la requête suivante :
 $registered = $request->getFlash('registered');
 ```
 
+## DevTools provider
+
+Pour initialiser les DevTools dans un projet :
+
+```php
+return [
+    'env' => 'dev',
+    'devtools' => [
+        'enabled' => true,
+        'address' => 'tcp://127.0.0.1:9567',
+    ],
+    'providers' => [
+        Impulse\Core\Provider\DevToolsProvider::class,
+    ],
+];
+```
+
 ## Documentation détaillée
 
 La documentation détaillée est disponible dans [`docs/`](./docs/README.md).

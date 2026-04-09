@@ -49,6 +49,29 @@ return [
 ];
 ```
 
+## `DevToolsProvider`
+
+Le core expose aussi un provider prêt à l'emploi pour initialiser l'émetteur DevTools :
+
+```php
+return [
+    'env' => 'dev',
+    'devtools' => [
+        'enabled' => true,
+        'address' => 'tcp://127.0.0.1:9567',
+    ],
+    'providers' => [
+        Impulse\Core\Provider\DevToolsProvider::class,
+    ],
+];
+```
+
+### Ce que fait ce provider
+
+- enregistre `DevToolsEmitterInterface` dans le conteneur ;
+- instancie par défaut `SocketEmitter` ;
+- initialise `EventCollector` au boot.
+
 ## Auto-enregistrement des routes de pages
 
 Si votre provider implémente `HasComponentRoutesInterface`, `AbstractProvider` charge automatiquement les pages trouvées dans le dossier retourné.

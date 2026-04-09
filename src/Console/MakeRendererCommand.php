@@ -45,7 +45,7 @@ class MakeRendererCommand extends Command
         
         namespace $namespace;
         
-        use Impulse\\Core\\Attribute\\Renderer;
+        use Impulse\\Core\\Attributes\\Renderer;
         use Impulse\\Core\\Contract\\TemplateRendererInterface;
         
         #[Renderer(

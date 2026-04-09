@@ -52,7 +52,7 @@ class MakePageCommand extends Command
         namespace $namespace;
         
         use Impulse\Core\Component\AbstractPage;
-        use Impulse\\Core\\Attribute\\PageProperty;
+        use Impulse\\Core\\Attributes\\PageProperty;
         
         #[PageProperty(
             route: '$path',

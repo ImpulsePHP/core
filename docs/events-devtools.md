@@ -96,6 +96,21 @@ Ces données sont ensuite synchronisées avec la session serveur.
 
 Le package inclut une collecte d'événements internes via `DevToolsRegistry`.
 
+Pour activer proprement l'émetteur socket dans un projet, ajoutez `Impulse\Core\Provider\DevToolsProvider` dans `providers` et activez `devtools` en configuration.
+
+```php
+return [
+    'env' => 'dev',
+    'devtools' => [
+        'enabled' => true,
+        'address' => 'tcp://127.0.0.1:9567',
+    ],
+    'providers' => [
+        Impulse\Core\Provider\DevToolsProvider::class,
+    ],
+];
+```
+
 ### Types d'informations collectées
 
 Selon le contexte et l'environnement :

@@ -19,7 +19,7 @@ final class EventCollector
             return;
         }
 
-        self::$enabled = Config::get('env', 'prod') === 'dev' && (bool) Config::get('devtools', false);
+        self::$enabled = Config::get('env', 'prod') === 'dev' && self::isDevToolsEnabled();
         self::$initialized = true;
 
         if (!self::$enabled) {
@@ -27,6 +27,20 @@ final class EventCollector
         }
 
         self::$emitter = $emitter ?? new SocketEmitter();
+    }
+
+    /**
+     * @throws \JsonException
+     */
+    private static function isDevToolsEnabled(): bool
+    {
+        $config = Config::get('devtools', false);
+
+        if (is_array($config)) {
+            return (bool) ($config['enabled'] ?? false);
+        }
+
+        return (bool) $config;
     }
 
     public static function emit(array $event): void

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Impulse\Core\Http\Router;
 
 use Impulse\Core\Support\Collector\HeadCollector;
+use Impulse\Core\Support\Collector\BodyCollector;
 use Impulse\Core\Support\Collector\ScriptCollector;
 use Impulse\Core\Support\Collector\StyleCollector;
 use Impulse\Core\App;
@@ -24,6 +25,7 @@ final class HtmlResponse
         $translator = App::get(TranslatorInterface::class);
         $head = $this->renderHead($meta);
         $locale = $translator->getLocale();
+        $body = $bodyContent . BodyCollector::render();
 
         $template = <<<HTML
             <!DOCTYPE html>
@@ -32,13 +34,15 @@ final class HtmlResponse
                     {$head}
                 </head>
                 <body>
-                    {$bodyContent}
+                    {$body}
                 </body>
             </html>
         HTML;
 
         $html = $this->minify($template);
         Profiler::stop('html:render');
+
+        BodyCollector::clear();
 
         return $html;
     }

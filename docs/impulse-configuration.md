@@ -122,7 +122,11 @@ return [
     'template_layout' => null,
 
     // Activation des outils de développement (DevTools). Utilisé conjointement avec 'env' === 'dev'.
-    'devtools' => false,
+    // Peut être un booléen simple ou un tableau plus complet.
+    'devtools' => [
+        'enabled' => false,
+        'address' => 'tcp://127.0.0.1:9567',
+    ],
 
     // CSS / assets fournis par des providers comme "story". Peut être :
     // - un tableau de chaînes (liens relatifs)
@@ -205,4 +209,3 @@ qui vous aide à initialiser `template_engine` et `template_path` et peut ajoute
 composer associé.
 
 *** Fin de la documentation du fichier `impulse.php`.
-
