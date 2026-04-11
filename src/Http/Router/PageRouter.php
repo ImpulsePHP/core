@@ -71,101 +71,120 @@ final class PageRouter
         );
 
         try {
-                $uri = $this->normalizeUri($request->getUri());
+            $uri = $this->normalizeUri($request->getUri());
 
-                foreach ($this->routes as $route => $meta) {
-                    if (!isset($this->compiledPatterns[$route])) {
-                        $this->compiledPatterns[$route] = '#^' . preg_replace('#\[:(\w+)]#', '(?<$1>[^/]+)', $route) . '$#';
-                    }
+            foreach ($this->routes as $route => $meta) {
+                if (!isset($this->compiledPatterns[$route])) {
+                    $this->compiledPatterns[$route] = '#^' . preg_replace('#\[:(\w+)]#', '(?<$1>[^/]+)', $route) . '$#';
+                }
 
-                    if (preg_match($this->compiledPatterns[$route], $uri, $matches)) {
-                        Logger::debug(
-                            sprintf('Matched route %s', $route),
-                            [
-                                'class' => self::class,
-                                'method' => __METHOD__,
-                                'route' => $route,
-                            ]
-                        );
-
-                        $middlewares = array_merge(
-                            Config::get('middlewares', []),
-                            $meta->middlewares ?? []
-                        );
-
-                        $cached = $this->cacheManager->get($request, $meta);
-                        if ($cached) {
-                            Logger::debug('Serving cached response', [
-                                'class' => self::class,
-                                'method' => __METHOD__,
-                            ]);
-
-                            $cached->send();
-
-                            $this->recordMatchedRoute($route, $meta, $matches);
-                            $this->recordHttpRequest(
-                                $request,
-                                $route,
-                                $cached->getStatusCode(),
-                                $start,
-                                $reqHeaders,
-                                $cached->getHeaders(),
-                                $reqBody
-                            );
-
-                            Profiler::stop('router:handle');
-                            return;
-                        }
-
-                        $response = MiddlewareDispatcher::run(
-                            $request,
-                            $middlewares,
-                            function (Request $req) use ($meta, $matches) {
-                                return $this->renderPage($req, $meta, $matches);
-                            }
-                        );
-
-                        $this->cacheManager->put($request, $response->getContent(), $meta);
-
-                        Logger::debug('Response cached', [
+                if (preg_match($this->compiledPatterns[$route], $uri, $matches)) {
+                    Logger::debug(
+                        sprintf('Matched route %s', $route),
+                        [
                             'class' => self::class,
                             'method' => __METHOD__,
-                        ]);
+                            'route' => $route,
+                        ]
+                    );
 
-                        $response->send();
+                    $accessResponse = (new PageAccessAuthorizer())->authorize($request, $meta);
+                    if ($accessResponse !== null) {
+                        $accessResponse->send();
 
                         $this->recordMatchedRoute($route, $meta, $matches);
                         $this->recordHttpRequest(
                             $request,
                             $route,
-                            $response->getStatusCode(),
+                            $accessResponse->getStatusCode(),
                             $start,
                             $reqHeaders,
-                            $response->getHeaders(),
+                            $accessResponse->getHeaders(),
                             $reqBody
                         );
 
                         Profiler::stop('router:handle');
                         return;
                     }
+
+                    $middlewares = array_merge(
+                        Config::get('middlewares', []),
+                        $meta->middlewares ?? []
+                    );
+
+                    $cached = $this->cacheManager->get($request, $meta);
+                    if ($cached) {
+                        Logger::debug('Serving cached response', [
+                            'class' => self::class,
+                            'method' => __METHOD__,
+                        ]);
+
+                        $cached->send();
+
+                        $this->recordMatchedRoute($route, $meta, $matches);
+                        $this->recordHttpRequest(
+                            $request,
+                            $route,
+                            $cached->getStatusCode(),
+                            $start,
+                            $reqHeaders,
+                            $cached->getHeaders(),
+                            $reqBody
+                        );
+
+                        Profiler::stop('router:handle');
+                        return;
+                    }
+
+                    $response = MiddlewareDispatcher::run(
+                        $request,
+                        $middlewares,
+                        function (Request $req) use ($meta, $matches) {
+                            return $this->renderPage($req, $meta, $matches);
+                        }
+                    );
+
+                    $this->cacheManager->put($request, $response->getContent(), $meta);
+
+                    Logger::debug('Response cached', [
+                        'class' => self::class,
+                        'method' => __METHOD__,
+                    ]);
+
+                    $response->send();
+
+                    $this->recordMatchedRoute($route, $meta, $matches);
+                    $this->recordHttpRequest(
+                        $request,
+                        $route,
+                        $response->getStatusCode(),
+                        $start,
+                        $reqHeaders,
+                        $response->getHeaders(),
+                        $reqBody
+                    );
+
+                    Profiler::stop('router:handle');
+                    return;
                 }
+            }
 
-                Logger::debug('No route matched', [
-                    'class' => self::class,
-                    'method' => __METHOD__,
-                ]);
+            Logger::debug('No route matched', [
+                'class' => self::class,
+                'method' => __METHOD__,
+            ]);
 
-                $this->renderNotFound();
-                $this->recordHttpRequest(
-                    $request,
-                    $request->getUri(),
-                    404,
-                    $start,
-                    $reqHeaders,
-                    [],
-                    $reqBody
-                );
-                Profiler::stop('router:handle');
+            $this->renderNotFound();
+            $this->recordHttpRequest(
+                $request,
+                $request->getUri(),
+                404,
+                $start,
+                $reqHeaders,
+                [],
+                $reqBody
+            );
+            Profiler::stop('router:handle');
         } catch (\Throwable $e) {
             $handler = new ExceptionHandler();
             $handler->render($e)->send();

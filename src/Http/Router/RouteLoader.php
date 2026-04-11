@@ -25,6 +25,7 @@ final class RouteLoader
 
     /**
      * @return array<string, object>
+     * @throws \JsonException
      */
     public function load(): array
     {
